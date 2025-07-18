@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2D迷你版Minecraft</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #1a2a6c);
+            font-family: 'Courier New', monospace;
+            color: #fff;
+            overflow: hidden;
+        }
+        
+        .game-container {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
+            margin: 20px;
+        }
+        
+        .game-header {
+            text-align: center;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            border: 3px solid #8B4513;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.6);
+        }
+        
+        h1 {
+            font-size: 2.5rem;
+            text-shadow: 3px 3px 0 #000;
+            color: #4CAF50;
+            margin-bottom: 10px;
+            letter-spacing: 2px;
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            color: #FFD700;
+            margin-bottom: 15px;
+        }
+        
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .control-item {
+            background: rgba(139, 69, 19, 0.8);
+            padding: 8px 15px;
+            border-radius: 5px;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+        
+        .key {
+            background: #333;
+            color: #FFD700;
+            padding: 3px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .game-content {
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        
+        #gameCanvas {
+            background: #87CEEB;
+            border: 4px solid #8B4513;
+            border-radius: 8px;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.8);
+            cursor: none;
+        }
+        
+        .sidebar {
+            flex: 1;
+            min-width: 200px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            padding: 15px;
+            border: 3px solid #8B4513;
+            box-shadow: 0 0 15px rgba(0, 0, 0, 0.6);
+        }
+        
+        .inventory {
+            margin-bottom: 20px;
+        }
+        
+        .inventory h2 {
+            color: #4CAF50;
+            margin-bottom: 15px;
+            text-align: center;
+            font-size: 1.5rem;
+        }
+        
+        .blocks {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+        }
+        
+        .block-item {
+            height: 60px;
+            border: 2px solid #555;
+            border-radius: 5px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            background: rgba(50, 50, 50, 0.8);
+        }
+        
+        .block-item:hover {
+            transform: scale(1.05);
+            border-color: #FFD700;
+        }
+        
+        .block-item.selected {
+            border-color: #4CAF50;
+            box-shadow: 0 0 10px #4CAF50;
+        }
+        
+        .block-preview {
+            width: 30px;
+            height: 30px;
+            margin-bottom: 5px;
+        }
+        
+        .stats {
+            background: rgba(139, 69, 19, 0.6);
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 20px;
+        }
+        
+        .stats h2 {
+            color: #FFD700;
+            margin-bottom: 10px;
+            text-align: center;
+            font-size: 1.3rem;
+        }
+        
+        .stats p {
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+        
+        .stats span {
+            color: #4CAF50;
+            font-weight: bold;
+        }
+        
+        .cursor {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border: 2px solid rgba(255, 255, 255, 0.8);
+            pointer-events: none;
+            transform: translate(-50%, -50%);
+            border-radius: 2px;
+            z-index: 100;
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #FFD700;
+            font-size: 0.9rem;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 10px;
+            border-radius: 8px;
+        }
+        
+        @media (max-width: 768px) {
+            .game-content {
+                flex-direction: column;
+            }
+            
+            .sidebar {
+                min-width: auto;
+            }
+            
+            h1 {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1>2D迷你版Minecraft</h1>
+            <p class="subtitle">挖掘、建造、创造属于你的世界！</p>
+            <div class="controls">
+                <div class="control-item">
+                    <span class="key">WASD</span> 移动角色
+                </div>
+                <div class="control-item">
+                    <span class="key">鼠标左键</span> 挖掘方块
+                </div>
+                <div class="control-item">
+                    <span class="key">鼠标右键</span> 放置方块
+                </div>
+                <div class="control-item">
+                    <span class="key">1-4</span> 选择方块类型
+                </div>
+            </div>
+        </div>
+        
+        <div class="game-content">
+            <canvas id="gameCanvas" width="640" height="480"></canvas>
+            
+            <div class="sidebar">
+                <div class="inventory">
+                    <h2>方块选择</h2>
+                    <div class="blocks">
+                        <div class="block-item selected" data-type="grass">
+                            <div class="block-preview" style="background: linear-gradient(to bottom, #7CFC00, #5E8C31);"></div>
+                            <div>草地</div>
+                        </div>
+                        <div class="block-item" data-type="dirt">
+                            <div class="block-preview" style="background: linear-gradient(to bottom, #8B4513, #5D2906);"></div>
+                            <div>泥土</div>
+                        </div>
+                        <div class="block-item" data-type="stone">
+                            <div class="block-preview" style="background: linear-gradient(to bottom, #808080, #606060);"></div>
+                            <div>石头</div>
+                        </div>
+                        <div class="block-item" data-type="wood">
+                            <div class="block-preview" style="background: linear-gradient(to bottom, #8B4513, #5D2906); border: 2px solid #5D2906;"></div>
+                            <div>木头</div>
+                        </div>
+                        <div class="block-item" data-type="leaves">
+                            <div class="block-preview" style="background: #32CD32; border: 2px solid #228B22;"></div>
+                            <div>树叶</div>
+                        </div>
+                        <div class="block-item" data-type="sand">
+                            <div class="block-preview" style="background: linear-gradient(to bottom, #F4A460, #D2691E);"></div>
+                            <div>沙子</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="stats">
+                    <h2>游戏统计</h2>
+                    <p>已放置方块: <span id="blocksPlaced">0</span></p>
+                    <p>已挖掘方块: <span id="blocksMined">0</span></p>
+                    <p>当前选择: <span id="currentBlock">草地</span></p>
+                    <p>世界大小: <span>64×48</span></p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="footer">
+            HTML5 Canvas实现 | 2D迷你版Minecraft | 使用WASD移动，鼠标左右键挖掘和放置方块
+        </div>
+    </div>
+    
+    <div class="cursor"></div>
+
+    <script>
+        // 游戏主逻辑
+        document.addEventListener('DOMContentLoaded', () => {
+            const canvas = document.getElementById('gameCanvas');
+            const ctx = canvas.getContext('2d');
+            const cursor = document.querySelector('.cursor');
+            const blocksPlacedElement = document.getElementById('blocksPlaced');
+            const blocksMinedElement = document.getElementById('blocksMined');
+            const currentBlockElement = document.getElementById('currentBlock');
+            
+            // 游戏常量
+            const BLOCK_SIZE = 20;
+            const WORLD_WIDTH = Math.floor(canvas.width / BLOCK_SIZE);
+            const WORLD_HEIGHT = Math.floor(canvas.height / BLOCK_SIZE);
+            const PLAYER_SIZE = 15;
+            const GRAVITY = 0.5;
+            const JUMP_FORCE = -10;
+            
+            // 方块类型
+            const BLOCK_TYPES = {
+                air: { name: '空气', color: 'transparent' },
+                grass: { 
+                    name: '草地', 
+                    render: (x, y) => {
+                        ctx.fillStyle = '#5E8C31';
+                        ctx.fillRect(x, y, BLOCK_SIZE, BLOCK_SIZE);
+                        ctx.fillStyle = '#7CFC00';
+                        ctx.fillRect(x, y, BLOCK_SIZE, BLOCK_SIZE / 2);
+                        
+                        // 草细节
+                        ctx.fillStyle = '#228B22';
+                        for (let i = 0; i < 5; i++) {
+                            const bladeX = x + Math.random() * BLOCK_SIZE;
+                            ctx.beginPath();
+                            ctx.moveTo(bladeX, y + 2);
+                            ctx.lineTo(bladeX + 2, y - 2);
+                            ctx.lineTo(bladeX - 2, y + 5);
+                            ctx.fill();
+                        }
+                    }
+                },
+                dirt: { 
+                    name: '泥土', 
+                    render: (x, y) => {
+                        ctx.fillStyle = '#8B4513';
+                        ctx.fillRect(x, y, BLOCK_SIZE, BLOCK_SIZE);
+                        
+                        // 泥土细节
+                        ctx.fillStyle = '#5D2906';
+                        for (let i = 0; i < 8; i++) {
+                            const dotX = x + Math.random() * BLOCK_SIZE;
+                            const dotY = y + Math.random() * BLOCK_SIZE;
+                            ctx.fillRect(dotX, dotY, 2, 2);
+                        }
+                    }
+                },
+                stone: { 
+                    name: '石头', 
+                    render: (x, y) => {
+                        ctx.fillStyle = '#808080';
+                        ctx.fillRect(x, y, BLOCK_SIZE, BLOCK_SIZE);
+                        
+                        // 石头纹理
+                        ctx.fillStyle = '#606060';
+                        ctx.beginPath();
+                        ctx.moveTo(x + 5, y + 3);
+                        ctx.lineTo(x + 15, y + 5);
+                        ctx.lineTo(x + 12, y + 15);
+                        ctx.lineTo(x + 2, y + 12);
+                        ctx.closePath();
+                        ctx.fill();
+                        
+                        ctx.fillStyle = '#A0A0A0';
+                        ctx.fillRect(x + 8, y + 8, 4, 4);
+                    }
+                },
+                wood: { 
+                    name: '木头', 
+                    render: (x, y) => {
+                        ctx.fillStyle = '#8B4513';
+                        ctx.fillRect(x, y, BLOCK_SIZE, BLOCK_SIZE);
+                        
+                        // 木纹
+                        ctx.fillStyle = '#5D2906';
+                        for (let i = 0; i < BLOCK_SIZE; i += 4) {
+                            ctx.fillRect(x + i, y, 1, BLOCK_SIZE);
+                        }
+                    }
+                },
+                leaves: { 
+                    name: '树叶', 
+                    render: (x, y) => {
+                        ctx.fillStyle = '#32CD32';
+                        ctx.fillRect(x, y, BLOCK_SIZE, BLOCK_SIZE);
+                        
+                        // 叶子细节
+                        ctx.fillStyle = '#228B22';
+                        for (let i = 0; i < 15; i++) {
+                            const leafX = x + Math.random() * BLOCK_SIZE;
+                            const leafY = y + Math.random() * BLOCK_SIZE;
+                            ctx.beginPath();
+                            ctx.arc(leafX, leafY, 3, 0, Math.PI * 2);
+                            ctx.fill();
+                        }
+                    }
+                },
+                sand: { 
+                    name: '沙子', 
+                    render: (x, y) => {
+                        ctx.fillStyle = '#F4A460';
+                        ctx.fillRect(x, y, BLOCK_SIZE, BLOCK_SIZE);
+                        
+                        // 沙子纹理
+                        ctx.fillStyle = '#D2691E';
+                        for (let i = 0; i < 10; i++) {
+                            const dotX = x + Math.random() * BLOCK_SIZE;
+                            const dotY = y + Math.random() * BLOCK_SIZE;
+                            ctx.fillRect(dotX, dotY, 2, 2);
+                        }
+                    }
+                }
+            };
+            
+            // 游戏状态
+            let world = [];
+            let player = {
+                x: canvas.width / 2,
+                y: canvas.height / 2,
+                width: PLAYER_SIZE,
+                height: PLAYER_SIZE,
+                velocityX: 0,
+                velocityY: 0,
+                speed: 3,
+                isOnGround: false
+            };
+            
+            let selectedBlockType = 'grass';
+            let blocksPlaced = 0;
+            let blocksMined = 0;
+            
+            // 初始化世界
+            function initWorld() {
+                world = [];
+                for (let y = 0; y < WORLD_HEIGHT; y++) {
+                    world[y] = [];
+                    for (let x = 0; x < WORLD_WIDTH; x++) {
+                        // 创建地形
+                        if (y > WORLD_HEIGHT - 5) {
+                            world[y][x] = 'dirt';
+                        } else if (y > WORLD_HEIGHT - 6) {
+                            world[y][x] = 'grass';
+                        } else if (y > WORLD_HEIGHT - 10) {
+                            world[y][x] = 'dirt';
+                        } else if (y === 5 && x > 10 && x < 15) {
+                            world[y][x] = 'wood';
+                        } else if (y === 4 && x > 9 && x < 16) {
+                            world[y][x] = 'leaves';
+                        } else if (y === 3 && x > 8 && x < 17) {
+                            world[y][x] = 'leaves';
+                        } else if (y === 2 && x > 10 && x < 15) {
+                            world[y][x] = 'leaves';
+                        } else if (Math.random() < 0.1 && y < WORLD_HEIGHT - 10) {
+                            world[y][x] = 'stone';
+                        } else if (x > 30 && x < 40 && y > WORLD_HEIGHT - 8) {
+                            world[y][x] = 'sand';
+                        } else {
+                            world[y][x] = 'air';
+                        }
+                    }
+                }
+            }
+            
+            // 绘制世界
+            function drawWorld() {
+                for (let y = 0; y < WORLD_HEIGHT; y++) {
+                    for (let x = 0; x < WORLD_WIDTH; x++) {
+                        const blockType = world[y][x];
+                        if (blockType !== 'air') {
+                            const renderFunc = BLOCK_TYPES[blockType].render;
+                            if (renderFunc) {
+                                renderFunc(x * BLOCK_SIZE, y * BLOCK_SIZE);
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 绘制玩家
+            function drawPlayer() {
+                ctx.fillStyle = '#3498db';
+                ctx.fillRect(player.x - player.width/2, player.y - player.height, player.width, player.height);
+                
+                // 绘制玩家细节
+                ctx.fillStyle = '#2980b9';
+                ctx.fillRect(player.x - player.width/2, player.y - player.height, player.width, player.height/3);
+                
+                ctx.fillStyle = '#e74c3c';
+                ctx.beginPath();
+                ctx.arc(player.x, player.y - player.height - 3, 4, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.fillStyle = '#2c3e50';
+                ctx.beginPath();
+                ctx.arc(player.x - 3, player.y - player.height - 4, 2, 0, Math.PI * 2);
+                ctx.arc(player.x + 3, player.y - player.height - 4, 2, 0, Math.PI * 2);
+                ctx.fill();
+            }
+            
+            // 更新玩家位置
+            function updatePlayer() {
+                // 应用重力
+                player.velocityY += GRAVITY;
+                
+                // 更新位置
+                player.x += player.velocityX;
+                player.y += player.velocityY;
+                
+                // 边界检查
+                if (player.x < player.width/2) player.x = player.width/2;
+                if (player.x > canvas.width - player.width/2) player.x = canvas.width - player.width/2;
+                if (player.y > canvas.height - player.height/2) {
+                    player.y = canvas.height - player.height/2;
+                    player.velocityY = 0;
+                    player.isOnGround = true;
+                }
+                
+                // 方块碰撞检测
+                player.isOnGround = false;
+                const playerLeft = Math.floor((player.x - player.width/2) / BLOCK_SIZE);
+                const playerRight = Math.floor((player.x + player.width/2) / BLOCK_SIZE);
+                const playerTop = Math.floor((player.y - player.height) / BLOCK_SIZE);
+                const playerBottom = Math.floor(player.y / BLOCK_SIZE);
+                
+                // 检测下方碰撞（地面）
+                for (let y = playerTop; y <= playerBottom; y++) {
+                    for (let x = playerLeft; x <= playerRight; x++) {
+                        if (y >= 0 && y < WORLD_HEIGHT && x >= 0 && x < WORLD_WIDTH && world[y][x] !== 'air') {
+                            if (player.velocityY > 0) {
+                                player.y = y * BLOCK_SIZE - player.height/2;
+                                player.velocityY = 0;
+                                player.isOnGround = true;
+                            }
+                        }
+                    }
+                }
+                
+                // 检测上方碰撞（顶头）
+                for (let y = playerTop; y <= playerBottom; y++) {
+                    for (let x = playerLeft; x <= playerRight; x++) {
+                        if (y >= 0 && y < WORLD_HEIGHT && x >= 0 && x < WORLD_WIDTH && world[y][x] !== 'air') {
+                            if (player.velocityY < 0) {
+                                player.y = (y + 1) * BLOCK_SIZE + player.height;
+                                player.velocityY = 0;
+                            }
+                        }
+                    }
+                }
+                
+                // 水平碰撞检测
+                for (let y = playerTop; y <= playerBottom; y++) {
+                    for (let x = playerLeft; x <= playerRight; x++) {
+                        if (y >= 0 && y < WORLD_HEIGHT && x >= 0 && x < WORLD_WIDTH && world[y][x] !== 'air') {
+                            if (player.velocityX > 0) {
+                                player.x = x * BLOCK_SIZE - player.width/2;
+                                player.velocityX = 0;
+                            } else if (player.velocityX < 0) {
+                                player.x = (x + 1) * BLOCK_SIZE + player.width/2;
+                                player.velocityX = 0;
+                            }
+                        }
+                    }
+                }
+            }
+            
+            // 放置/挖掘方块
+            function handleBlockAction(x, y, isPlacing) {
+                const gridX = Math.floor(x / BLOCK_SIZE);
+                const gridY = Math.floor(y / BLOCK_SIZE);
+                
+                if (gridX >= 0 && gridX < WORLD_WIDTH && gridY >= 0 && gridY < WORLD_HEIGHT) {
+                    // 确保玩家不能修改自身所在的方块
+                    const playerGridX = Math.floor(player.x / BLOCK_SIZE);
+                    const playerGridY = Math.floor((player.y - player.height/2) / BLOCK_SIZE);
+                    
+                    if (Math.abs(gridX - playerGridX) < 2 && Math.abs(gridY - playerGridY) < 2) {
+                        return;
+                    }
+                    
+                    if (isPlacing) {
+                        if (world[gridY][gridX] === 'air') {
+                            world[gridY][gridX] = selectedBlockType;
+                            blocksPlaced++;
+                            blocksPlacedElement.textContent = blocksPlaced;
+                        }
+                    } else {
+                        if (world[gridY][gridX] !== 'air') {
+                            world[gridY][gridX] = 'air';
+                            blocksMined++;
+                            blocksMinedElement.textContent = blocksMined;
+                        }
+                    }
+                }
+            }
+            
+            // 游戏主循环
+            function gameLoop() {
+                // 清除画布
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // 绘制天空
+                ctx.fillStyle = '#87CEEB';
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // 绘制云朵
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+                ctx.beginPath();
+                ctx.arc(100, 80, 20, 0, Math.PI * 2);
+                ctx.arc(130, 70, 25, 0, Math.PI * 2);
+                ctx.arc(160, 80, 20, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.beginPath();
+                ctx.arc(400, 60, 25, 0, Math.PI * 2);
+                ctx.arc(430, 50, 30, 0, Math.PI * 2);
+                ctx.arc(460, 60, 25, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // 绘制世界和玩家
+                drawWorld();
+                drawPlayer();
+                
+                // 更新玩家位置
+                updatePlayer();
+                
+                // 继续游戏循环
+                requestAnimationFrame(gameLoop);
+            }
+            
+            // 事件监听
+            document.addEventListener('keydown', (e) => {
+                switch(e.key.toLowerCase()) {
+                    case 'w':
+                    case 'arrowup':
+                        if (player.isOnGround) {
+                            player.velocityY = JUMP_FORCE;
+                            player.isOnGround = false;
+                        }
+                        break;
+                    case 'a':
+                    case 'arrowleft':
+                        player.velocityX = -player.speed;
+                        break;
+                    case 'd':
+                    case 'arrowright':
+                        player.velocityX = player.speed;
+                        break;
+                    case '1':
+                        selectedBlockType = 'grass';
+                        updateSelectedBlock();
+                        break;
+                    case '2':
+                        selectedBlockType = 'dirt';
+                        updateSelectedBlock();
+                        break;
+                    case '3':
+                        selectedBlockType = 'stone';
+                        updateSelectedBlock();
+                        break;
+                    case '4':
+                        selectedBlockType = 'wood';
+                        updateSelectedBlock();
+                        break;
+                }
+            });
+            
+            document.addEventListener('keyup', (e) => {
+                switch(e.key.toLowerCase()) {
+                    case 'a':
+                    case 'd':
+                    case 'arrowleft':
+                    case 'arrowright':
+                        player.velocityX = 0;
+                        break;
+                }
+            });
+            
+            canvas.addEventListener('mousemove', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                // 更新自定义光标位置
+                cursor.style.left = e.clientX + 'px';
+                cursor.style.top = e.clientY + 'px';
+                
+                // 高亮悬停的方块
+                const gridX = Math.floor(mouseX / BLOCK_SIZE);
+                const gridY = Math.floor(mouseY / BLOCK_SIZE);
+                
+                if (gridX >= 0 && gridX < WORLD_WIDTH && gridY >= 0 && gridY < WORLD_HEIGHT) {
+                    cursor.style.width = BLOCK_SIZE + 'px';
+                    cursor.style.height = BLOCK_SIZE + 'px';
+                    cursor.style.transform = `translate(-${BLOCK_SIZE/2}px, -${BLOCK_SIZE/2}px)`;
+                } else {
+                    cursor.style.width = '20px';
+                    cursor.style.height = '20px';
+                    cursor.style.transform = 'translate(-50%, -50%)';
+                }
+            });
+            
+            canvas.addEventListener('mousedown', (e) => {
+                const rect = canvas.getBoundingClientRect();
+                const mouseX = e.clientX - rect.left;
+                const mouseY = e.clientY - rect.top;
+                
+                if (e.button === 0) { // 左键
+                    handleBlockAction(mouseX, mouseY, false);
+                } else if (e.button === 2) { // 右键
+                    handleBlockAction(mouseX, mouseY, true);
+                }
+            });
+            
+            // 阻止右键菜单
+            canvas.addEventListener('contextmenu', (e) => {
+                e.preventDefault();
+            });
+            
+            // 方块选择
+            document.querySelectorAll('.block-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    document.querySelectorAll('.block-item').forEach(i => i.classList.remove('selected'));
+                    item.classList.add('selected');
+                    selectedBlockType = item.dataset.type;
+                    currentBlockElement.textContent = BLOCK_TYPES[selectedBlockType].name;
+                });
+            });
+            
+            // 更新选中的方块显示
+            function updateSelectedBlock() {
+                document.querySelectorAll('.block-item').forEach(item => {
+                    item.classList.remove('selected');
+                    if (item.dataset.type === selectedBlockType) {
+                        item.classList.add('selected');
+                    }
+                });
+                currentBlockElement.textContent = BLOCK_TYPES[selectedBlockType].name;
+            }
+            
+            // 初始化游戏
+            initWorld();
+            gameLoop();
+        });
+    </script>
+</body>
+</html>
